@@ -71,14 +71,36 @@ export default function AddItemPage() {
       return;
     }
 
-    if (!formData.name || !formData.price || !formData.originalPrice || !formData.description) {
-      showToast('Please fill out all required fields', 'error');
+    if (!formData.name.trim()) {
+      showToast('Item title is required', 'error');
+      return;
+    }
+
+    const priceNum = Number(formData.price);
+    if (!formData.price || isNaN(priceNum) || priceNum <= 0) {
+      showToast('Price must be greater than 0', 'error');
+      return;
+    }
+
+    const originalPriceNum = formData.originalPrice ? Number(formData.originalPrice) : priceNum;
+    if (isNaN(originalPriceNum) || originalPriceNum < 0) {
+      showToast('Original price cannot be negative', 'error');
+      return;
+    }
+
+    if (!formData.description.trim()) {
+      showToast('Description is required', 'error');
       return;
     }
 
     try {
       setLoading(true);
-      showToast('Uploading image...', 'success');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('You must be signed in to list an item. Please log in.');
+      }
+
+      showToast('Uploading image...', 'info');
 
       // 1. Upload image to Vercel Blob
       const imgData = new FormData();
@@ -87,32 +109,38 @@ export default function AddItemPage() {
       const uploadRes = await fetch('/api/upload', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${token}`,
         },
         body: imgData,
       });
 
       if (!uploadRes.ok) {
-        throw new Error('Failed to upload image. Check Vercel Blob configuration.');
+        const uploadErr = await uploadRes.json().catch(() => ({}));
+        throw new Error(uploadErr.error || 'Failed to upload image. Check Vercel Blob configuration.');
       }
 
       const uploadResult = await uploadRes.json();
       const imageUrl = uploadResult.url;
 
-      showToast('Saving product...', 'success');
+      showToast('Saving product...', 'info');
 
       // 2. Submit Product Data to Database
-      const token = localStorage.getItem('token');
+      const effectiveOriginalPrice = originalPriceNum > 0 ? originalPriceNum : priceNum;
+      const discount =
+        effectiveOriginalPrice > priceNum
+          ? Math.min(100, Math.max(0, Math.round(((effectiveOriginalPrice - priceNum) / effectiveOriginalPrice) * 100)))
+          : 0;
+
       const productPayload = {
-        name: formData.name,
-        price: Number(formData.price),
-        originalPrice: Number(formData.originalPrice),
+        name: formData.name.trim(),
+        price: priceNum,
+        originalPrice: effectiveOriginalPrice,
         type: formData.type,
         category: formData.category,
-        description: formData.description,
+        description: formData.description.trim(),
         image: imageUrl,
-        discount: Math.max(0, Math.round(((Number(formData.originalPrice) - Number(formData.price)) / Number(formData.originalPrice)) * 100) || 0),
-        rating: 0, // new items start unrated
+        discount,
+        rating: 4.5,
       };
 
       const productRes = await fetch('/api/products', {
@@ -124,7 +152,10 @@ export default function AddItemPage() {
         body: JSON.stringify(productPayload),
       });
 
-      if (!productRes.ok) throw new Error('Failed to save product listing');
+      const productData = await productRes.json().catch(() => ({}));
+      if (!productRes.ok) {
+        throw new Error(productData.error || productData.message || 'Failed to save product listing');
+      }
 
       showToast('Success! Your item is now live.', 'success');
       router.push('/dashboard/items');
@@ -251,7 +282,7 @@ export default function AddItemPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Original Retail Price (₹)</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Original Retail Price (₹) <span className="text-gray-400 font-normal text-xs">(Optional)</span></label>
               <input
                 type="number"
                 name="originalPrice"
@@ -260,9 +291,8 @@ export default function AddItemPage() {
                 placeholder="0"
                 min="0"
                 className="input"
-                required
               />
-              <p className="text-[10px] text-gray-500 mt-1">Used to calculate discount badge</p>
+              <p className="text-[10px] text-gray-500 mt-1">Used to calculate discount badge (defaults to listing price if omitted)</p>
             </div>
 
             <div className="md:col-span-2">

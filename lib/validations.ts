@@ -16,13 +16,16 @@ export const loginSchema = z.object({
 });
 
 export const productSchema = z.object({
-  name: z.string().min(1, 'Product name is required'),
+  name: z.string().min(1, 'Product name is required').trim(),
   price: z.number().positive('Price must be positive'),
-  originalPrice: z.number().positive('Original price must be positive'),
+  originalPrice: z.number().min(0, 'Original price cannot be negative').default(0),
   type: z.enum(['rent', 'sale']),
-  category: z.string().min(1, 'Category is required'),
-  description: z.string().min(10, 'Description must be at least 10 characters'),
-  image: z.string().url('Invalid image URL'),
+  category: z.string().min(1, 'Category is required').trim(),
+  description: z.string().min(1, 'Description is required').trim(),
+  image: z.string().min(1, 'Image is required').refine(
+    (val) => val.startsWith('/') || val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:image/'),
+    { message: 'Invalid image URL or path' }
+  ),
   rating: z.number().min(0).max(5).optional(),
   discount: z.number().min(0).max(100).optional(),
 });

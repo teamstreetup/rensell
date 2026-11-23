@@ -4,6 +4,8 @@ import Order from '@/models/Order';
 import User from '@/models/User'; // Registers User model in Mongoose
 import { verifyToken } from '@/lib/jwt';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');

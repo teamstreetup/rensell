@@ -5,6 +5,8 @@ import Product from '@/models/Product';
 import { verifyToken } from '@/lib/jwt';
 import mongoose from 'mongoose';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

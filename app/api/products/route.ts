@@ -4,6 +4,8 @@ import Product from '@/models/Product';
 import { verifyToken } from '@/lib/jwt';
 import { productSchema } from '@/lib/validations';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB();

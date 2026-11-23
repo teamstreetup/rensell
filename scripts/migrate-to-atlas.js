@@ -24,18 +24,22 @@ async function migrate() {
     for (const collName of collections) {
       console.log(`\n--- Migrating collection: ${collName} ---`);
       const localColl = localConn.db.collection(collName);
-      const atlasColl = atlasConn.db.collection(collName);
 
       const docs = await localColl.find({}).toArray();
       console.log(`Found ${docs.length} document(s) in local ${collName}`);
 
       if (docs.length > 0) {
-        // Clear destination collection to avoid duplicate _id conflicts on rerun
-        await atlasColl.deleteMany({});
-        console.log(`Cleared existing documents in Atlas ${collName}`);
+        // Sync to 'rensell' database on Atlas
+        const rensellColl = atlasConn.useDb('rensell').collection(collName);
+        await rensellColl.deleteMany({});
+        await rensellColl.insertMany(docs);
+        console.log(`✓ Synced ${docs.length} document(s) to Atlas rensell.${collName}`);
 
-        const insertRes = await atlasColl.insertMany(docs);
-        console.log(`✓ Inserted ${insertRes.insertedCount} document(s) into Atlas ${collName}`);
+        // Also sync to 'test' database on Atlas (Vercel default without dbName)
+        const testColl = atlasConn.useDb('test').collection(collName);
+        await testColl.deleteMany({});
+        await testColl.insertMany(docs);
+        console.log(`✓ Synced ${docs.length} document(s) to Atlas test.${collName}`);
       } else {
         console.log(`No documents to migrate for ${collName}`);
       }

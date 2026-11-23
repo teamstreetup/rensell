@@ -37,11 +37,15 @@ async function connectDB() {
   }
 
   if (!cached.promise) {
-    const opts = {
+    const rawUri = getMongoUri();
+    const hasDbInUri = /mongodb(?:\+srv)?:\/\/[^\/]+\/([^?]+)/i.test(rawUri);
+
+    const opts: mongoose.ConnectOptions = {
       bufferCommands: false,
+      ...(hasDbInUri ? {} : { dbName: 'rensell' }),
     };
 
-    cached.promise = mongoose.connect(getMongoUri(), opts);
+    cached.promise = mongoose.connect(rawUri, opts);
   }
 
   try {

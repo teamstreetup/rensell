@@ -165,7 +165,8 @@ export default function EditItemPage() {
                 });
 
                 if (!uploadRes.ok) {
-                    throw new Error('Failed to upload image');
+                    const uploadErr = await uploadRes.json().catch(() => ({}));
+                    throw new Error(uploadErr.error || 'Failed to upload image');
                 }
 
                 const uploadResult = await uploadRes.json();

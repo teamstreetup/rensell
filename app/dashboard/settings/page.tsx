@@ -104,7 +104,10 @@ export default function SettingsPage() {
           body: imgData,
         });
 
-        if (!uploadRes.ok) throw new Error('Image upload failed');
+        if (!uploadRes.ok) {
+          const uploadErr = await uploadRes.json().catch(() => ({}));
+          throw new Error(uploadErr.error || 'Image upload failed');
+        }
         const uploadResult = await uploadRes.json();
         imageUrl = uploadResult.url;
       }

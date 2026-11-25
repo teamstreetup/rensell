@@ -1,5 +1,0 @@
-{
-  "healthCheck": {
-    "path": "/healthz"
-  }
-}
